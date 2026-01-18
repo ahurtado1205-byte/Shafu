@@ -124,11 +124,11 @@
         textMaestro.value = savedMaestro ? savedMaestro : DEFAULT_MAESTRO;
     }
     // 2. Header Default
-    const savedHeader = localStorage.getItem('shafu_header_v1');
+    const savedHeader = localStorage.getItem('shafu_header_v2');
     // Header por defecto precargado (el de la imagen del usuario para ayudar)
     // Header por defecto precargado (Versión Compacta - Vista Web "Mis Comprobantes")
     // OJO: AFIP web a veces oculta "Tipo de Comprobante". Esta versión asume: Fecha, PV, Nro, Denom...
-    const DEFAULT_HEADER_TEXT = `Fecha de Emisión	Punto de Venta	Número Desde	Denominación Emisor	Imp. Neto Gravado IVA 0%	IVA 2,5%	Imp. Neto Gravado IVA 2,5%	IVA 5%	Imp. Neto Gravado IVA 5%	IVA 10,5%	Imp. Neto Gravado IVA 10,5%	IVA 21%	Imp. Neto Gravado IVA 21%	Imp. Neto Gravado IVA 27%	Imp. Neto Gravado IVA 27%	Imp. Neto Gravado Total	Imp. Neto No Gravado	Imp. Op. Exentas	Otros Tributos	Total IVA	Imp. Total`;
+    const DEFAULT_HEADER_TEXT = `Fecha de Emisión	Punto de Venta	Número Desde	Denominación Emisor	Imp. Neto Gravado IVA 0%	IVA 2,5%	Imp. Neto Gravado IVA 2,5%	IVA 5%	Imp. Neto Gravado IVA 5%	IVA 10,5%	Imp. Neto Gravado IVA 10,5%	IVA 21%	Imp. Neto Gravado IVA 21%	IVA 27%	Imp. Neto Gravado IVA 27%	Imp. Neto Gravado Total	Imp. Neto No Gravado	Imp. Op. Exentas	Otros Tributos	Total IVA	Imp. Total`;
 
     if (textHeaderDef) {
         // Forzar la actualización al header correcto si el usuario tiene el que causó problemas
@@ -136,7 +136,7 @@
         if (!savedHeader || savedHeader.length < 50 || savedHeader.includes(oldBadHeader)) {
             textHeaderDef.value = DEFAULT_HEADER_TEXT;
             // Actualizar también el storage para que no persista el malo
-            localStorage.setItem('shafu_header_v1', DEFAULT_HEADER_TEXT);
+            localStorage.setItem('shafu_header_v2', DEFAULT_HEADER_TEXT);
         } else {
             textHeaderDef.value = savedHeader;
         }
@@ -152,7 +152,7 @@
 
     if (textHeaderDef) {
         textHeaderDef.addEventListener('input', () => {
-            localStorage.setItem('shafu_header_v1', textHeaderDef.value);
+            localStorage.setItem('shafu_header_v2', textHeaderDef.value);
         });
     }
 
