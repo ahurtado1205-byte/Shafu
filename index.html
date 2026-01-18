@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Shafu Facturas</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo">
+                <div class="logo-icon">S</div>
+                <h1>Shafu Facturas</h1>
+            </div>
+            <div class="header-actions">
+                <span class="status-badge" id="statusBadge">Listo</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Settings Panel -->
+            <section class="panel settings-panel">
+                <div class="panel-header">
+                    <h2>Configuración</h2>
+                </div>
+                <div class="panel-body">
+                    <p class="text-muted">Gestioná acá tu lista de proveedores.</p>
+
+                    <div class="maestro-actions">
+                        <input type="file" id="importMaestroFile" style="display: none" accept=".tsv,.txt,.csv">
+                        <button id="btnImportMaestro" class="btn-secondary" title="Cargar archivo TXT/TSV">📂 Cargar
+                            Archivo</button>
+                        <button id="btnExportMaestro" class="btn-secondary" title="Bajar a mi PC">💾 Descargar</button>
+                        <button id="toggleMaestroBtn" class="btn-text">Ver/Editar Manualmente</button>
+                    </div>
+
+                    <div id="maestroContainer" class="hidden">
+                        <div class="maestro-header">
+                            <small>Formato: CUIT | RAZON | COND | ALIAS</small>
+                            <button id="resetMaestroBtn" class="btn-text text-danger">Restaurar original</button>
+                        </div>
+                        <textarea id="maestroInput" spellcheck="false" placeholder="Cargando..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Header Config Panel -->
+            <section class="panel header-panel">
+                <div class="panel-header">
+                    <h2>Encabezado por Defecto (Títulos)</h2>
+                </div>
+                <div class="panel-body">
+                    <p class="text-muted">Despreocupate de copiar los títulos. Definilos acá una vez y listo.</p>
+                    <textarea id="defaultHeaderInput" class="small-textarea" spellcheck="false"></textarea>
+                </div>
+            </section>
+
+            <!-- Input Panel -->
+            <section class="panel input-panel">
+                <div class="panel-header">
+                    <h2>DATOS ENTRADA</h2>
+                    <div class="actions">
+                        <button id="clearInputBtn" class="btn-text text-danger" title="Borrar contenido">
+                            🗑️ Borrar
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <textarea id="afipInput"
+                        placeholder="Pegá aquí el contenido copiado de Mis Comprobantes (incluyendo encabezados)..."
+                        spellcheck="false"></textarea>
+                </div>
+                <div class="panel-footer">
+                    <button id="processBtn" class="btn-primary">
+                        <span class="icon">⚡</span> Convertir a TSV
+                    </button>
+                </div>
+            </section>
+
+            <!-- Output Panel -->
+            <section class="panel output-panel">
+                <div class="panel-header">
+                    <h2>Resultado TSV</h2>
+                    <div class="actions">
+                        <button id="copyBtn" class="btn-secondary" disabled>Copiar</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div id="outputOverlay" class="placeholder">
+                        <p>Los resultados aparecerán aquí</p>
+                    </div>
+                    <textarea id="tsvOutput" readonly spellcheck="false"></textarea>
+                </div>
+            </section>
+        </main>
+
+        <!-- Logs/Errors Toast Area -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
