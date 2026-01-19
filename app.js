@@ -124,11 +124,11 @@
         textMaestro.value = savedMaestro ? savedMaestro : DEFAULT_MAESTRO;
     }
     // 2. Header Default
-    const savedHeader = localStorage.getItem('shafu_header_v2');
+    const savedHeader = localStorage.getItem('shafu_header_v3');
     // Header por defecto precargado (el de la imagen del usuario para ayudar)
     // Header por defecto precargado (Versión Compacta - Vista Web "Mis Comprobantes")
     // OJO: AFIP web a veces oculta "Tipo de Comprobante". Esta versión asume: Fecha, PV, Nro, Denom...
-    const DEFAULT_HEADER_TEXT = `Fecha de Emisión	Punto de Venta	Número Desde	Denominación Emisor	Imp. Neto Gravado IVA 0%	IVA 2,5%	Imp. Neto Gravado IVA 2,5%	IVA 5%	Imp. Neto Gravado IVA 5%	IVA 10,5%	Imp. Neto Gravado IVA 10,5%	IVA 21%	Imp. Neto Gravado IVA 21%	IVA 27%	Imp. Neto Gravado IVA 27%	Imp. Neto Gravado Total	Imp. Neto No Gravado	Imp. Op. Exentas	Otros Tributos	Total IVA	Imp. Total`;
+    const DEFAULT_HEADER_TEXT = `Fecha de Emisión	Punto de Venta	Número Desde	Denominación Emisor	Imp. Neto Gravado IVA 0%	Imp. Neto Gravado IVA 2,5%	IVA 2,5%	Imp. Neto Gravado IVA 5%	IVA 5%	Imp. Neto Gravado IVA 10,5%	IVA 10,5%	Imp. Neto Gravado IVA 21%	IVA 21%	Imp. Neto Gravado IVA 27%	IVA 27%	Imp. Neto Gravado Total	Imp. Neto No Gravado	Imp. Op. Exentas	Otros Tributos	Total IVA	Imp. Total`;
 
     if (textHeaderDef) {
         // Forzar la actualización al header correcto si el usuario tiene el que causó problemas
@@ -136,7 +136,7 @@
         if (!savedHeader || savedHeader.length < 50 || savedHeader.includes(oldBadHeader)) {
             textHeaderDef.value = DEFAULT_HEADER_TEXT;
             // Actualizar también el storage para que no persista el malo
-            localStorage.setItem('shafu_header_v2', DEFAULT_HEADER_TEXT);
+            localStorage.setItem('shafu_header_v3', DEFAULT_HEADER_TEXT);
         } else {
             textHeaderDef.value = savedHeader;
         }
@@ -152,7 +152,7 @@
 
     if (textHeaderDef) {
         textHeaderDef.addEventListener('input', () => {
-            localStorage.setItem('shafu_header_v2', textHeaderDef.value);
+            localStorage.setItem('shafu_header_v3', textHeaderDef.value);
         });
     }
 
@@ -486,6 +486,18 @@
 
             // Generar Filas
             tasas.forEach((t, idx) => {
+                // SAFETY CHECK: Columna Desfasada
+                // Si el Neto detectado es exactamente igual al Total de la factura (y no es 0), 
+                // es 99% probable que haya un desfasaje de columnas (la columna Total cayó en la columna Neto).
+                // Ignoramos esta tasa fantasma.
+                const totalInvoice = getNum(colMap.impTotal);
+                if (t.neto > 0 && Math.abs(t.neto - totalInvoice) < 0.1 && totalInvoice > 100) {
+                    // Solo saltamos si hay otras tasas o si parece muy sospechoso (ej. no hay IVA pero hay NETO=TOTAL en una col gravada)
+                    // Pero para seguridad, asumimos que NUNCA el Neto Gravado es igual al Total (siempre hay IVA o Percep).
+                    // Salvo tasa 0%, pero esa cae en otra logica.
+                    return;
+                }
+
                 // Fila Output
                 // FECHA | PROVEEDOR | TIPO COMP | TIPO FACT | PV | NRO | CONCEPTO | NETO | IVA | NO GRAV | PERC IVA | IIBB RN | IIBB CABA | OTRA PERC | TOTAL | CUIT | COND | TASA
 
@@ -514,7 +526,7 @@
                 // Formatear salida
                 const lineOutput = [
                     common.fecha,
-                    common.proveedor,
+                    common.proveedor, // Ya viene limpio del maestro
                     common.tipoComp,
                     common.tipoFact,
                     common.pv,
@@ -599,6 +611,27 @@
         // 2. Procesamiento de registros unidos
         for (const fullLine of records) {
             // Estrategia: Buscar patrón de CUIT (11 digitos) dentro del string
+            // 2.A: Si hay tabs, usar estructura fija
+            if (fullLine.includes('\t')) {
+                const parts = fullLine.split('\t');
+                // Estructura esperada: CUIT | RAZON | COND | ALIAS
+                if (parts.length >= 2) {
+                    const c = parts[0].trim().replace(/\D/g, '');
+                    if (c.length === 11) {
+                        const cuitFmt = `${c.substring(0, 2)}-${c.substring(2, 10)}-${c.substring(10)}`;
+                        const razon = parts[1].trim();
+                        const cond = parts[2] ? parts[2].trim() : 'RI';
+                        const alias = parts[3] ? parts[3].trim() : '';
+
+                        const obj = { cuit: cuitFmt, razon, condIva: cond, alias };
+                        byCuit.set(cuitFmt, obj);
+                        byName.set(razon, obj);
+                        continue;
+                    }
+                }
+            }
+
+            // 2.B: Fallback para pegados sin tabs (espacios)
             // Limpiamos dashes para buscar easy
 
             // Buscar secuencia de 11 digitos que empiece con prefijos validos
