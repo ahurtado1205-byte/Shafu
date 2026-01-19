@@ -124,19 +124,15 @@
         textMaestro.value = savedMaestro ? savedMaestro : DEFAULT_MAESTRO;
     }
     // 2. Header Default
-    const savedHeader = localStorage.getItem('shafu_header_v3');
-    // Header por defecto precargado (el de la imagen del usuario para ayudar)
-    // Header por defecto precargado (Versión Compacta - Vista Web "Mis Comprobantes")
-    // OJO: AFIP web a veces oculta "Tipo de Comprobante". Esta versión asume: Fecha, PV, Nro, Denom...
-    const DEFAULT_HEADER_TEXT = `Fecha de Emisión	Punto de Venta	Número Desde	Denominación Emisor	Imp. Neto Gravado IVA 0%	Imp. Neto Gravado IVA 2,5%	IVA 2,5%	Imp. Neto Gravado IVA 5%	IVA 5%	Imp. Neto Gravado IVA 10,5%	IVA 10,5%	Imp. Neto Gravado IVA 21%	IVA 21%	Imp. Neto Gravado IVA 27%	IVA 27%	Imp. Neto Gravado Total	Imp. Neto No Gravado	Imp. Op. Exentas	Otros Tributos	Total IVA	Imp. Total`;
+    const savedHeader = localStorage.getItem('shafu_header_v4');
+    // Header exacto pedido por el usuario (mantiene encoding mojibake y nombres cortados)
+    const DEFAULT_HEADER_TEXT = `Fecha de	Punto de V	NÃºmero	Nro. Doc. Emisor	DenominaciÃ³n Emisor	Imp. Neto	IVA 2,5%	Imp. Neto	IVA 5%	Imp. Neto	IVA 10,5%	Imp. Neto	IVA 21%	Imp. Neto	IVA 27%	Imp. Neto	Imp. Neto	Imp. Op. E	Otros Trib	Total IVA	Imp. Total`;
 
     if (textHeaderDef) {
-        // Forzar la actualización al header correcto si el usuario tiene el que causó problemas
-        const oldBadHeader = "Tipo Doc. Emisor";
-        if (!savedHeader || savedHeader.length < 50 || savedHeader.includes(oldBadHeader)) {
+        // Forzar actualización si es una versión vieja o vacía
+        if (!savedHeader || savedHeader.length < 50) {
             textHeaderDef.value = DEFAULT_HEADER_TEXT;
-            // Actualizar también el storage para que no persista el malo
-            localStorage.setItem('shafu_header_v3', DEFAULT_HEADER_TEXT);
+            localStorage.setItem('shafu_header_v4', DEFAULT_HEADER_TEXT);
         } else {
             textHeaderDef.value = savedHeader;
         }
@@ -319,19 +315,19 @@
         };
 
         const colMap = {
-            fecha: findCol('Fecha de Emisión', 'Fecha'),
+            fecha: findCol('Fecha de Emisión', 'Fecha', 'Fecha de'),
             tipoComp: findCol('Tipo de Comprobante', 'Tipo'),
-            pv: findCol('Punto de Venta', 'Pto. Vta.', 'PV'),
-            nroDesde: findCol('Número Desde', 'Número', 'Nro.', 'N°', 'Nro'),
+            pv: findCol('Punto de Venta', 'Pto. Vta.', 'PV', 'Punto de V'),
+            nroDesde: findCol('Número Desde', 'Número', 'Nro.', 'N°', 'Nro', 'NÃºmero'),
             cuit: findCol('Nro. Doc. Emisor', 'CUIT', 'Doc. Emisor'),
-            denom: findCol('Denominación Emisor', 'Denominación', 'Razón Social', 'Nombre'),
+            denom: findCol('Denominación Emisor', 'Denominación', 'Razón Social', 'Nombre', 'DenominaciÃ³n Emisor'),
             impTotal: findCol('Imp. Total', 'Total', 'Importe Total'),
             netoNG: findCol('Imp. Neto No Gravado', 'Neto No Gravado', 'No Gravado'),
-            opExentas: findCol('Imp. Op. Exentas', 'Op. Exentas', 'Exento'),
-            otrosTrib: findCol('Otros Tributos', 'Otros'),
+            opExentas: findCol('Imp. Op. Exentas', 'Op. Exentas', 'Exento', 'Imp. Op. E'),
+            otrosTrib: findCol('Otros Tributos', 'Otros', 'Otros Trib'),
             // IVAs
             neto21: findCol('Imp. Neto Gravado IVA 21%', 'Neto 21%'),
-            iva21: findCol('IVA 21%'),
+            iva21: findCol('IVA 21%', 'IVA 21%'),
             neto105: findCol('Imp. Neto Gravado IVA 10,5%', 'Neto 10,5%', 'Neto 10.5%'),
             iva105: findCol('IVA 10,5%', 'IVA 10.5%'),
             neto27: findCol('Imp. Neto Gravado IVA 27%', 'Neto 27%'),
@@ -339,6 +335,25 @@
             neto5: findCol('Imp. Neto Gravado IVA 5%', 'Neto 5%'),
             neto25: findCol('Imp. Neto Gravado IVA 2,5%', 'Neto 2,5%', 'Neto 2.5%'),
         };
+
+        // --- RELATIVE MAPPING FALLBACK (Para headers repetidos como "Imp. Neto") ---
+        const inferNeto = (ivaIdx) => (ivaIdx > 0) ? ivaIdx - 1 : -1;
+        if (colMap.neto21 === -1 && colMap.iva21 !== -1) colMap.neto21 = inferNeto(colMap.iva21);
+        if (colMap.neto105 === -1 && colMap.iva105 !== -1) colMap.neto105 = inferNeto(colMap.iva105);
+        if (colMap.neto27 === -1 && colMap.iva27 !== -1) colMap.neto27 = inferNeto(colMap.iva27);
+        if (colMap.neto25 === -1) {
+            const iva25 = findCol('IVA 2,5%');
+            if (iva25 !== -1) colMap.neto25 = inferNeto(iva25);
+        }
+        if (colMap.neto5 === -1) {
+            const iva5 = findCol('IVA 5%');
+            if (iva5 !== -1) colMap.neto5 = inferNeto(iva5);
+        }
+        // Neto NG suele estar antes de Exento o antes de Otros Trib
+        if (colMap.netoNG === -1) {
+            if (colMap.opExentas !== -1) colMap.netoNG = colMap.opExentas - 1;
+            else if (colMap.otrosTrib !== -1) colMap.netoNG = colMap.otrosTrib - 2;
+        }
 
         // --- FALLBACK POR POSICION (Si fallan los nombres/encodings) ---
         // Asumimos estructura estándar de "Mis Comprobantes": Fecha(0), PV(1), Nro(2), Denom(3)...
@@ -354,8 +369,9 @@
         }
 
         const tsvRows = [];
-        const errors = [];
-        let processedCount = 0;
+        const errors = []; // Solo para errores críticos de datos
+        let processedRowsCount = 0;
+        let unknownProvidersCount = 0;
 
         // Iterar filas
         for (let i = 1; i < afipLines.length; i++) {
@@ -408,8 +424,7 @@
             }
 
             if (!maestroProv) {
-                const denom = getVal(colMap.denom) || "Desconocido";
-                errors.push(`BLOQUEO: Proveedor no reconocido (${denom}). Agregalo al maestro.`);
+                unknownProvidersCount++;
                 continue;
             }
 
@@ -546,33 +561,46 @@
                 ].join('\t');
 
                 tsvRows.push(lineOutput);
-                processedCount++;
+                processedRowsCount++;
             });
         }
 
         if (errors.length > 0) {
-            // Mostrar errores
-            textOutput.value = "AVISO (bloqueo TSV):\n" + errors.join('\n');
-            showToast(`Se encontraron ${errors.length} problemas.`, 'warning');
-            statusBadge.textContent = "Revisar";
-            statusBadge.style.color = "var(--warning)";
-            statusBadge.style.background = "rgba(245, 158, 11, 0.1)";
+            // Mostrar errores críticos
+            textOutput.value = "AVISO (bloqueo TSV por error de datos):\n" + errors.join('\n');
+            showToast(`Se encontraron ${errors.length} problemas graves.`, 'error');
+            statusBadge.textContent = "Revisar Datos";
+            statusBadge.style.color = "var(--error)";
+            statusBadge.style.background = "rgba(239, 68, 68, 0.1)";
             return;
         }
 
-        if (processedCount === 0) {
+        if (processedRowsCount === 0) {
             textOutput.value = "";
-            showToast('No se encontraron comprobantes válidos en el rango de fechas.', 'warning');
+            let msg = 'No se generaron registros.';
+            if (unknownProvidersCount > 0) msg += ` (${unknownProvidersCount} proveedores no están en el maestro)`;
+            showToast(msg, 'warning');
+            statusBadge.textContent = "Sin Resultados";
             return;
         }
 
         // Success
         textOutput.value = tsvRows.join('\n');
-        statusBadge.textContent = `Generado (${processedCount} filas)`;
+
+        // Status con info de filtrado
+        let statusText = `Generado (${processedRowsCount} filas)`;
+        if (unknownProvidersCount > 0) {
+            statusText += ` - [${unknownProvidersCount} filtrados]`;
+        }
+
+        statusBadge.textContent = statusText;
         statusBadge.style.color = "var(--success)";
         statusBadge.style.background = "rgba(16, 185, 129, 0.1)";
         btnCopy.disabled = false;
-        showToast('Conversión exitosa', 'success');
+
+        let successMsg = 'Conversión exitosa';
+        if (unknownProvidersCount > 0) successMsg += `. Se ignoraron ${unknownProvidersCount} proveedores desconocidos.`;
+        showToast(successMsg, 'success');
     }
 
     // --- UTILS ---
@@ -720,6 +748,7 @@
             .replace(/ñ/g, 'n')
             // Fix encoding glitches
             .replace(/ã³/g, 'o')
+            .replace(/Ã³/g, 'o') // ó -> Ã³
             .replace(/Ã©/g, 'e') // é -> Ã©
             .replace(/ã©/g, 'e')
             .replace(/Ãº/g, 'u') // ú -> Ãº e.g. Numero
